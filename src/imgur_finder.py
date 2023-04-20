@@ -22,7 +22,7 @@ class Imgur:
 
     def generate_links(self, recursive: bool = True) -> None:
         """Create a file with the links."""
-        files = glob.iglob(f"{self._path}**.txt", recursive=recursive)
+        files = glob.iglob(f"{self._path}**.md", recursive=recursive)
         with self._file_path.open("w", encoding="utf8") as g:
             for file_name in files:
                 print(f"Checking: {file_name}")

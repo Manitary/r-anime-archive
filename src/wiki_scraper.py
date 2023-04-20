@@ -22,7 +22,7 @@ class WikiScraper:
     def download_wiki_contents(self, path: str = "data\\wiki") -> None:
         """Download all wiki contents of the given subreddit into local files."""
         for wiki_page in self._subreddit.wiki:
-            file_path: pathlib.PurePath = pathlib.Path(f"{path}\\{wiki_page}.txt")
+            file_path: pathlib.PurePath = pathlib.Path(f"{path}\\{wiki_page}.md")
             file_path.parent.mkdir(parents=True, exist_ok=True)
             with file_path.open("w", encoding="utf8") as f:
                 print(f"Downloading: {wiki_page}")
