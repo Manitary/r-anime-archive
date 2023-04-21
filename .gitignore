@@ -1,1 +1,8 @@
+# Configuration files
 *.ini
+
+# Python
+*.pyc
+
+# db
+*.sqlite
