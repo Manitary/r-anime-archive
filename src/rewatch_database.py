@@ -16,7 +16,7 @@ def dict_factory(cursor: sqlite3.Cursor, row: sqlite3.Row) -> dict:
 class Database:
     """The database."""
 
-    def __init__(self, database: str) -> None:
+    def __init__(self, database: str = "data\\rewatches.sqlite") -> None:
         """Initiliase from db path."""
         try:
             self._db = sqlite3.connect(database=database)
@@ -51,6 +51,6 @@ if __name__ == "__main__":
         level=logging.DEBUG,
     )
     logging.info("-" * 60)
-    db = Database("rewatches.sqlite")
+    db = Database()
     db.setup_tables()
     logging.info("%s%s", "-" * 60, "\n")
