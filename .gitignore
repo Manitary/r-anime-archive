@@ -4,5 +4,8 @@
 # Python
 *.pyc
 
-# db
+# Db
 *.sqlite
+
+# Logs
+*.log
