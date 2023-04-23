@@ -14,7 +14,7 @@ sys.stdout.reconfigure(encoding="utf-8")
 REWATCH_ENTRY_PATH = "src\\queries\\add_rewatch_entry.sql"
 EPISODE_ENTRY_PATH = "src\\queries\\add_rewatch_episodes.sql"
 
-FILE = "data\\wiki\\anime\\rewatches\\rewatch_archive\\2022.md"
+FILE_PATH = "data\\wiki\\anime\\rewatches\\rewatch_archive\\"
 
 REWATCH = re.compile(r"##[^\#]")
 HOSTS = re.compile(r"(\/?u\/[\w_-]+)")
@@ -195,6 +195,7 @@ class Parser:
         if (rewatch_name, year) in {
             ("Anime Movie Fortnight", 2015),
             ("Halloween Horror Week", 2015),
+            ("Shinseiki Evangelion (Rebuild)", 2016),
         }:
             return TableParser.parse_table_one_header_contents_right(table)
         if TABLE_LINK_AND_TEXT.findall(table[0]):
@@ -226,13 +227,14 @@ class Parser:
             with open(EPISODE_ENTRY_PATH, encoding="utf8") as f:
                 query = f.read()
                 for episode, link in rewatch_contents.items():
-                    self._db.q.execute(
-                        query,
-                        (rewatch_id, link, Parser.remove_formatting(episode)),
-                    )
+                    if link:
+                        self._db.q.execute(
+                            query,
+                            (rewatch_id, link, Parser.remove_formatting(episode)),
+                        )
         except BaseException as e:
             print(f"Exception: {e}")
-            print(f"{rewatch_id} - {episode} - {link}")
+            print(f"{rewatch_id} - {rewatch.rewatch_name} - {episode} - {link}")
         self._db.commit()
 
     @property
@@ -265,5 +267,7 @@ class Parser:
 
 
 if __name__ == "__main__":
-    parser = Parser(FILE, Database())
-    parser.parse_file()
+    for y in range(2014, 2023):
+        print(f"Processing year {y}")
+        parser = Parser(f"{FILE_PATH}{y}.md", Database())
+        parser.parse_file()
