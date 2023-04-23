@@ -11,6 +11,9 @@ from rewatch_database import Database
 # issue with "psi" character
 sys.stdout.reconfigure(encoding="utf-8")
 
+REWATCH_ENTRY_PATH = "src\\queries\\add_rewatch_entry.sql"
+EPISODE_ENTRY_PATH = "src\\queries\\add_rewatch_episodes.sql"
+
 FILE = "data\\wiki\\anime\\rewatches\\rewatch_archive\\2022.md"
 
 REWATCH = re.compile(r"##[^\#]")
@@ -39,6 +42,17 @@ class Rewatch:
         This is for when a rewatch has multiple sub-entries, e.g. multiple seasons."""
         self.table_name = None
         self.table = None
+
+    @property
+    def info(self) -> tuple[str]:
+        """Return rewatch info to add to the db."""
+        return (
+            self.rewatch_name,
+            self.rewatch_alt_name,
+            self.table_name,
+            self.year,
+            self.hosts,
+        )
 
 
 class TableParser:
@@ -78,7 +92,7 @@ class TableParser:
         return data
 
     @staticmethod
-    def parse_table_one_header_one_contents(table: list[str]) -> dict:
+    def parse_table_one_header_contents_right(table: list[str]) -> dict:
         """Parse a table that has a single header, and link in the rightmost column."""
         data = {}
         for row in table[1:]:
@@ -89,16 +103,25 @@ class TableParser:
             data[title] = link[0] if link else None
         return data
 
+    @staticmethod
+    def parse_table_one_header_contents_left(table: list[str]) -> dict:
+        """Parse a table that has a single header, and link in the leftmost column.
+
+        Used for mod movie series."""
+        true_table = [row.split("|")[0] for row in table[1:]]
+        return TableParser.parse_table_no_headers(true_table)
+
 
 class Parser:
     """Parser for rewatch wiki pages."""
 
-    def __init__(self, file_path: str) -> None:
+    def __init__(self, file_path: str, db: Database) -> None:
         self._file_path = file_path
         with open(file_path, encoding="utf-8") as f:
             # Strip \n and ignore empty lines
             self._contents = list(filter(None, (line.rstrip() for line in f)))
         self._idx = 0
+        self._db = db
 
     def parse_file(self) -> None:
         """Parse the contents."""
@@ -110,7 +133,7 @@ class Parser:
 
     def parse_entry(self) -> None:
         """Parse a rewatch entry."""
-        rewatch_name = self.current_line[2:].strip()
+        rewatch_name = self.remove_formatting(self.current_line[2:])
         year = self.year
         if self.year == 2014:
             rewatch_name, year = REWATCH_YEAR.findall(rewatch_name)[0]
@@ -123,11 +146,9 @@ class Parser:
                 rewatch.hosts = ", ".join(HOSTS.findall(self.current_line))
                 self.next_line()
             elif self.current_line.count("|") >= 1:
-                rewatch.table = self.add_table()
-            elif (
-                self.current_line.startswith("**")
-                and self.current_line.endswith("**")
-                or self.current_line.startswith("###")
+                rewatch.table = self.read_table()
+            elif self.current_line.startswith("*") or self.current_line.startswith(
+                "###"
             ):
                 if rewatch.hosts:
                     rewatch.table_name = self.remove_formatting(self.current_line)
@@ -137,10 +158,14 @@ class Parser:
             else:
                 self.next_line()
             if rewatch.table:
+                if rewatch.table[0].split("|")[1] == "**Host**":
+                    rewatch.hosts = ", ".join(
+                        row.split("|")[1].strip() for row in rewatch.table[1:]
+                    )
                 self.create_entry(rewatch=rewatch)
                 rewatch.reset_table()
 
-    def add_table(self) -> list[str]:
+    def read_table(self) -> list[str]:
         """Parse a markdown table."""
         table = []
         while (not self.out_of_bounds) and self.current_line.count("|") >= 1:
@@ -155,6 +180,10 @@ class Parser:
     ) -> dict:
         """Extract information from the table given in markdown format."""
         if (rewatch_name, year) in {
+            ("Mod Movie Series", 2022),
+        }:
+            return TableParser.parse_table_one_header_contents_left(table)
+        if (rewatch_name, year) in {
             ("Ah! My Goddess", 2016),
             ("Baka to Test", 2016),
             ("Barakamon", 2016),
@@ -167,7 +196,7 @@ class Parser:
             ("Anime Movie Fortnight", 2015),
             ("Halloween Horror Week", 2015),
         }:
-            return TableParser.parse_table_one_header_one_contents(table)
+            return TableParser.parse_table_one_header_contents_right(table)
         if TABLE_LINK_AND_TEXT.findall(table[0]):
             return TableParser.parse_table_no_headers(table)
         if not TABLE_HEADER.findall(table[0]):
@@ -178,24 +207,33 @@ class Parser:
     def remove_formatting(text: str) -> str:
         """Remove bold formatting from markdown code."""
         ans = text.strip()
-        if ans.startswith("**") and ans.endswith("**"):
-            ans = ans[2:-2].strip()
+        while ans.count("*") > 1:
+            ans = ans.replace("*", "", 2)
         while ans.startswith("#"):
             ans = ans[1:]
+        ans.strip()
         return ans
 
     def create_entry(self, rewatch: Rewatch) -> None:
         """Create a db entry."""
-        print(rewatch.rewatch_name)
-        print(rewatch.rewatch_alt_name)
-        print(rewatch.hosts)
-        print(rewatch.table_name)
-        print(rewatch.year)
-        rewatch_contents = self.parse_table(
-            table=rewatch.table, rewatch_name=rewatch.rewatch_name, year=self.year
-        )
-        print(rewatch_contents)
-        print("\n")
+        try:
+            with open(REWATCH_ENTRY_PATH, encoding="utf8") as f:
+                self._db.q.execute(f.read(), rewatch.info)
+            rewatch_id = self._db.last_row_id
+            rewatch_contents = self.parse_table(
+                table=rewatch.table, rewatch_name=rewatch.rewatch_name, year=self.year
+            )
+            with open(EPISODE_ENTRY_PATH, encoding="utf8") as f:
+                query = f.read()
+                for episode, link in rewatch_contents.items():
+                    self._db.q.execute(
+                        query,
+                        (rewatch_id, link, Parser.remove_formatting(episode)),
+                    )
+        except BaseException as e:
+            print(f"Exception: {e}")
+            print(f"{rewatch_id} - {episode} - {link}")
+        self._db.commit()
 
     @property
     def current_line(self) -> str:
@@ -227,6 +265,5 @@ class Parser:
 
 
 if __name__ == "__main__":
-    db = Database()
-    parser = Parser(FILE)
+    parser = Parser(FILE, Database())
     parser.parse_file()
