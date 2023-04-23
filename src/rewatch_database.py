@@ -20,7 +20,7 @@ class Database:
         """Initiliase from db path."""
         try:
             self._db = sqlite3.connect(database=database)
-            self._db.execute("PRAGMA foreign_keys=ON")
+            self._db.execute("PRAGMA foreign_keys = ON")
             self._db.row_factory = dict_factory
         except sqlite3.OperationalError:
             logging.error("Failed to open database: %s", database)
@@ -36,6 +36,17 @@ class Database:
             with open(query, encoding="utf8") as f:
                 self.q.execute(f.read())
                 logging.info("Query executed: %s", query)
+
+    @property
+    def last_row_id(self) -> int:
+        """Return the last inserted row id.
+
+        Used to get the latest autoincremented id after insertion."""
+        return self.q.execute("SELECT last_insert_rowid() AS id").fetchone()["id"]
+
+    def commit(self) -> None:
+        """Commit transactions."""
+        self._db.commit()
 
 
 if __name__ == "__main__":
