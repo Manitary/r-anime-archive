@@ -14,7 +14,7 @@ sys.stdout.reconfigure(encoding="utf-8")
 REWATCH_ENTRY_PATH = "src\\queries\\add_rewatch_entry.sql"
 EPISODE_ENTRY_PATH = "src\\queries\\add_rewatch_episodes.sql"
 
-FILE_PATH = "data\\wiki\\anime\\rewatches\\rewatch_archive\\"
+FILE_PATH = "data\\wiki\\anime\\rewatches\\rewatch_archive_edited\\"
 
 REWATCH = re.compile(r"##[^\#]")
 HOSTS = re.compile(r"(\/?u\/[\w_-]+)")
