@@ -48,6 +48,10 @@ class Database:
         """Commit transactions."""
         self._db.commit()
 
+    def rollback(self) -> None:
+        """Rollback transaction."""
+        self._db.rollback()
+
 
 if __name__ == "__main__":
     os.makedirs("logs", exist_ok=True)
