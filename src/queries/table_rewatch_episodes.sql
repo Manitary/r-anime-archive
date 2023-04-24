@@ -1,7 +1,6 @@
 CREATE TABLE IF NOT EXISTS episode (
     id INTEGER NOT NULL
-    , post_id TEXT NOT NULL
+    , post_id TEXT NOT NULL PRIMARY KEY UNIQUE
     , title TEXT
-    , PRIMARY KEY(id, post_id)
     , FOREIGN KEY(id) REFERENCES rewatch(id) ON DELETE RESTRICT ON UPDATE CASCADE
 )
