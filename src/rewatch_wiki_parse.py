@@ -8,9 +8,6 @@ from operator import ior
 from dataclasses import dataclass, field
 from rewatch_database import Database
 
-# issue with "psi" character
-sys.stdout.reconfigure(encoding="utf-8")
-
 REWATCH_ENTRY_PATH = "src\\queries\\add_rewatch_entry.sql"
 EPISODE_ENTRY_PATH = "src\\queries\\add_rewatch_episodes.sql"
 
@@ -20,7 +17,6 @@ REWATCH = re.compile(r"##[^\#]")
 HOSTS = re.compile(r"(\/?u\/[\w_-]+)")
 TABLE_LINK_AND_TEXT = re.compile(r"\[([^\|]*)\]\(\/(?:comments\/)?([^\|]+)\)")
 TABLE_HEADER = re.compile(r"\[[^\|]+\]\([^\|]+\)")
-# LINK_TEXT = re.compile(r"([^\|]+)\|?")
 TABLE_LINK = re.compile(r"\[[^\|]*\]\(\/(?:comments\/)?([^\|]+)\)")
 REWATCH_YEAR = re.compile(r"(.*) \((\d+)\)")
 
