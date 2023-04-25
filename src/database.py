@@ -1,10 +1,12 @@
-"""Set up and organise the database for archiving rewatches."""
+"""Database setup."""
 
 import os
 import sqlite3
-import glob
+import abc
 import logging
 from logging.handlers import TimedRotatingFileHandler
+
+REWATCH_PATH = "src\\queries\\rewatch\\table_setup.sql"
 
 
 def dict_factory(cursor: sqlite3.Cursor, row: sqlite3.Row) -> dict:
@@ -13,7 +15,7 @@ def dict_factory(cursor: sqlite3.Cursor, row: sqlite3.Row) -> dict:
     return dict(zip(fields, row))
 
 
-class Database:
+class Database(abc.ABC):
     """The database."""
 
     def __init__(self, path: str) -> None:
@@ -31,12 +33,9 @@ class Database:
         """Access the cursor."""
         return self._db.cursor()
 
-    def setup_tables(self, path: str = "src\\queries") -> None:
+    @abc.abstractmethod
+    def setup_tables(self) -> None:
         """Create tables."""
-        for query in glob.glob(pathname=f"{path}\\table_*.sql"):
-            with open(query, encoding="utf8") as f:
-                self.q.execute(f.read())
-                logging.info("Query executed: %s", query)
 
     @property
     def last_row_id(self) -> int:
@@ -58,6 +57,17 @@ class Database:
         self._db.rollback()
 
 
+class DatabaseRewatch(Database):
+    """Rewatch database."""
+
+    def setup_tables(self) -> None:
+        """Create tables."""
+        with open(REWATCH_PATH, encoding="utf8") as f:
+            query = f.read()
+        self.q.executescript(query)
+        logging.info("Query executed: %s", REWATCH_PATH)
+
+
 if __name__ == "__main__":
     os.makedirs("logs", exist_ok=True)
     logging.basicConfig(
@@ -71,6 +81,6 @@ if __name__ == "__main__":
         level=logging.DEBUG,
     )
     logging.info("-" * 60)
-    db = Database(path="data\\rewatches.sqlite")
+    db = DatabaseRewatch(path="data\\rewatches.sqlite")
     db.setup_tables()
     logging.info("%s%s", "-" * 60, "\n")

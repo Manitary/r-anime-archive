@@ -5,7 +5,7 @@ import abc
 from functools import reduce
 from operator import ior
 from dataclasses import dataclass, field
-from database_rewatch import Database
+from database import Database
 
 TABLE_LINK_AND_TEXT = re.compile(r"\[([^\|]*)\]\(\/(?:comments\/)?([^\|]+)\)")
 TABLE_LINK = re.compile(r"\[[^\|]*\]\(\/(?:comments\/)?([^\|]+)\)")
@@ -101,7 +101,7 @@ class TableParser:
 class Parser(abc.ABC):
     """Parser for wiki pages."""
 
-    def __init__(self, file_path: str, db: Database = Database()) -> None:
+    def __init__(self, file_path: str, db: Database) -> None:
         self._file_path = file_path
         with open(file_path, encoding="utf-8") as f:
             # Strip \n and ignore empty lines

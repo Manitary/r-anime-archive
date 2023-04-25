@@ -8,7 +8,7 @@ from typing import Any
 import praw
 from praw.models.reddit.submission import Submission
 from praw.models.reddit.comment import Comment
-from database_rewatch import Database
+from database import DatabaseRewatch
 
 QUERY_PATH = "src\\queries\\add_comment_tree_relations.sql"
 with open(QUERY_PATH, encoding="utf8") as F:
@@ -18,7 +18,7 @@ with open(QUERY_PATH, encoding="utf8") as F:
 class CommentTreeScraper(abc.ABC):
     """The scraper."""
 
-    def __init__(self, config_name: str, db: Database) -> None:
+    def __init__(self, config_name: str, db: DatabaseRewatch) -> None:
         """Initialise a Reddit instance for the given bot name.
 
         The configuration must be in a .ini file in the workspace folder."""

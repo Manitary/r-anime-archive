@@ -3,14 +3,14 @@
 import os
 import logging
 from logging.handlers import TimedRotatingFileHandler
-from database_rewatch import Database
+from database import DatabaseRewatch
 from scraper_comment_tree import CommentTreeScraper
 
 BASE_PATH = "data\\rewatch_data"
 DB_PATH = "data\\rewatches.sqlite"
 
 
-def scrape_from_db(config_name: str, db: Database) -> None:
+def scrape_from_db(config_name: str, db: DatabaseRewatch) -> None:
     """Scrape"""
     scraper = CommentTreeScraper(config_name=config_name, db=db)
     rewatches = db.q.execute("SELECT id FROM rewatch WHERE processed = 0").fetchall()
@@ -69,5 +69,5 @@ if __name__ == "__main__":
         datefmt="%Y-%m-%d %H:%M:%S",
         level=logging.DEBUG,
     )
-    scrape_from_db(config_name="CommentTreeScraper", db=Database(path=DB_PATH))
+    scrape_from_db(config_name="CommentTreeScraper", db=DatabaseRewatch(path=DB_PATH))
     logging.info("-" * 60)

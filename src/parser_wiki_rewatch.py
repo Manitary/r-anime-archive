@@ -2,11 +2,11 @@
 
 import re
 import pathlib
-from database_rewatch import Database
+from database import DatabaseRewatch
 from parser_wiki import TableParser, Rewatch, Parser
 
-REWATCH_ENTRY_PATH = "src\\queries\\add_rewatch_entry.sql"
-EPISODE_ENTRY_PATH = "src\\queries\\add_rewatch_episodes.sql"
+REWATCH_ENTRY_PATH = "src\\queries\\rewatch\\add_rewatch_entry.sql"
+EPISODE_ENTRY_PATH = "src\\queries\\add_episodes.sql"
 
 FILE_PATH = "data\\wiki\\anime\\rewatches\\rewatch_archive_edited\\"
 
@@ -106,5 +106,5 @@ class RewatchParser(Parser):
 if __name__ == "__main__":
     for y in range(2014, 2023):
         print(f"Processing year {y}")
-        parser = RewatchParser(f"{FILE_PATH}{y}.md", Database())
+        parser = RewatchParser(f"{FILE_PATH}{y}.md", DatabaseRewatch())
         parser.parse_file()
