@@ -106,5 +106,7 @@ class ParserRewatch(Parser):
 if __name__ == "__main__":
     for y in range(2014, 2023):
         print(f"Processing year {y}")
-        parser = ParserRewatch(f"{FILE_PATH}{y}.md", DatabaseRewatch())
+        parser = ParserRewatch(
+            f"{FILE_PATH}{y}.md", DatabaseRewatch(path="data\\rewatches.sqlite")
+        )
         parser.parse_file()

@@ -127,7 +127,7 @@ class Parser(abc.ABC):
         return table
 
     @staticmethod
-    @abs.abstractmethod
+    @abc.abstractmethod
     def parse_table(
         table: list[str], rewatch_name: str = None, year: int = None
     ) -> dict:
