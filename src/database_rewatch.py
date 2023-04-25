@@ -22,7 +22,7 @@ class Database:
             self._db = sqlite3.connect(database=path)
             self._db.execute("PRAGMA foreign_keys = ON")
             self._db.row_factory = dict_factory
-            self.setup_tables()
+            self._db.isolation_level = None
         except sqlite3.OperationalError:
             logging.error("Failed to open database: %s", path)
 
@@ -44,6 +44,10 @@ class Database:
 
         Used to get the latest autoincremented id after insertion."""
         return self.q.execute("SELECT last_insert_rowid() AS id").fetchone()["id"]
+
+    def begin(self) -> None:
+        """Begin transaction."""
+        self.q.execute("BEGIN")
 
     def commit(self) -> None:
         """Commit transactions."""
@@ -68,4 +72,5 @@ if __name__ == "__main__":
     )
     logging.info("-" * 60)
     db = Database(path="data\\rewatches.sqlite")
+    db.setup_tables()
     logging.info("%s%s", "-" * 60, "\n")
