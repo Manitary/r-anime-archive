@@ -6,7 +6,9 @@ import abc
 import logging
 from logging.handlers import TimedRotatingFileHandler
 
-REWATCH_PATH = "src\\queries\\rewatch\\table_setup.sql"
+REWATCH_PATH = "src\\queries\\rewatch"
+WRITING_PATH = "src\\queries\\writing"
+TABLE_QUERY = "table_setup.sql"
 
 
 def dict_factory(cursor: sqlite3.Cursor, row: sqlite3.Row) -> dict:
@@ -62,10 +64,26 @@ class DatabaseRewatch(Database):
 
     def setup_tables(self) -> None:
         """Create tables."""
-        with open(REWATCH_PATH, encoding="utf8") as f:
+        with open(f"{REWATCH_PATH}\\{TABLE_QUERY}", encoding="utf8") as f:
             query = f.read()
         self.q.executescript(query)
-        logging.info("Query executed: %s", REWATCH_PATH)
+        logging.info("Query executed: %s", f"{REWATCH_PATH}\\{TABLE_QUERY}")
+
+
+class DatabaseWriting(Database):
+    """Writing database."""
+
+    def setup_tables(self) -> None:
+        """Create tables."""
+        with open(f"{WRITING_PATH}\\{TABLE_QUERY}", encoding="utf8") as f:
+            query = f.read()
+        self.q.executescript(query)
+        logging.info("Query executed: %s", f"{WRITING_PATH}\\{TABLE_QUERY}")
+
+
+def create_database(db: Database) -> None:
+    """Create db and set up tables."""
+    db.setup_tables()
 
 
 if __name__ == "__main__":
@@ -81,6 +99,6 @@ if __name__ == "__main__":
         level=logging.DEBUG,
     )
     logging.info("-" * 60)
-    db = DatabaseRewatch(path="data\\rewatches.sqlite")
-    db.setup_tables()
+    create_database(db=DatabaseRewatch(path="data\\rewatches.sqlite"))
+    create_database(db=DatabaseWriting(path="data\\writing.sqlite"))
     logging.info("%s%s", "-" * 60, "\n")
