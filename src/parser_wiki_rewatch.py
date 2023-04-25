@@ -17,7 +17,7 @@ TABLE_HEADER = re.compile(r"\[[^\|]+\]\([^\|]+\)")
 REWATCH_YEAR = re.compile(r"(.*) \((\d+)\)")
 
 
-class RewatchParser(Parser):
+class ParserRewatch(Parser):
     """Parser for rewatch wiki pages."""
 
     def parse_file(self) -> None:
@@ -106,5 +106,5 @@ class RewatchParser(Parser):
 if __name__ == "__main__":
     for y in range(2014, 2023):
         print(f"Processing year {y}")
-        parser = RewatchParser(f"{FILE_PATH}{y}.md", DatabaseRewatch())
+        parser = ParserRewatch(f"{FILE_PATH}{y}.md", DatabaseRewatch())
         parser.parse_file()
