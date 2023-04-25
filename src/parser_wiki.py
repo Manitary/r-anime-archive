@@ -5,7 +5,7 @@ import abc
 from functools import reduce
 from operator import ior
 from dataclasses import dataclass, field
-from rewatch_database import Database
+from database_rewatch import Database
 
 TABLE_LINK_AND_TEXT = re.compile(r"\[([^\|]*)\]\(\/(?:comments\/)?([^\|]+)\)")
 TABLE_LINK = re.compile(r"\[[^\|]*\]\(\/(?:comments\/)?([^\|]+)\)")

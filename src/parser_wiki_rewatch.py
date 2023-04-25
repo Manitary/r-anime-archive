@@ -2,7 +2,7 @@
 
 import re
 import pathlib
-from rewatch_database import Database
+from database_rewatch import Database
 from parser_wiki import TableParser, Rewatch, Parser
 
 REWATCH_ENTRY_PATH = "src\\queries\\add_rewatch_entry.sql"
@@ -69,6 +69,7 @@ class RewatchParser(Parser):
         """Extract information from the table given in markdown format."""
         if (rewatch_name, year) in {
             ("Mod Movie Series", 2022),
+            ("Summer Movie Series", 2022),
         }:
             return TableParser.parse_table_one_header_contents_left(table)
         if (rewatch_name, year) in {
