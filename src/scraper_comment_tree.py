@@ -8,7 +8,7 @@ from typing import Any
 import praw
 from praw.models.reddit.submission import Submission
 from praw.models.reddit.comment import Comment
-from rewatch_database import Database
+from database_rewatch import Database
 
 QUERY_PATH = "src\\queries\\add_comment_tree_relations.sql"
 with open(QUERY_PATH, encoding="utf8") as F:
@@ -141,9 +141,4 @@ class CommentTreeScraper(abc.ABC):
             )
             for comment_id, comment in comments_data.items()
         )
-        try:
-            self._db.q.executemany(ADD_COMMENT_TREE_RELATIONS, relations)
-            self._db.commit()
-        except BaseException as e:
-            print(f"Exception: {e}")
-            self._db.rollback()
+        self._db.q.executemany(ADD_COMMENT_TREE_RELATIONS, relations)
