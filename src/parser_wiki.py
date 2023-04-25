@@ -1,24 +1,14 @@
-"""Parse the rewatch wiki and archive the data in the database."""
+"""General wiki parser."""
 
-import sys
 import re
-import pathlib
+import abc
 from functools import reduce
 from operator import ior
 from dataclasses import dataclass, field
 from rewatch_database import Database
 
-REWATCH_ENTRY_PATH = "src\\queries\\add_rewatch_entry.sql"
-EPISODE_ENTRY_PATH = "src\\queries\\add_rewatch_episodes.sql"
-
-FILE_PATH = "data\\wiki\\anime\\rewatches\\rewatch_archive_edited\\"
-
-REWATCH = re.compile(r"##[^\#]")
-HOSTS = re.compile(r"(\/?u\/[\w_-]+)")
 TABLE_LINK_AND_TEXT = re.compile(r"\[([^\|]*)\]\(\/(?:comments\/)?([^\|]+)\)")
-TABLE_HEADER = re.compile(r"\[[^\|]+\]\([^\|]+\)")
 TABLE_LINK = re.compile(r"\[[^\|]*\]\(\/(?:comments\/)?([^\|]+)\)")
-REWATCH_YEAR = re.compile(r"(.*) \((\d+)\)")
 
 
 @dataclass
@@ -108,10 +98,10 @@ class TableParser:
         return TableParser.parse_table_no_headers(true_table)
 
 
-class Parser:
-    """Parser for rewatch wiki pages."""
+class Parser(abc.ABC):
+    """Parser for wiki pages."""
 
-    def __init__(self, file_path: str, db: Database) -> None:
+    def __init__(self, file_path: str, db: Database = Database()) -> None:
         self._file_path = file_path
         with open(file_path, encoding="utf-8") as f:
             # Strip \n and ignore empty lines
@@ -119,47 +109,13 @@ class Parser:
         self._idx = 0
         self._db = db
 
+    @abc.abstractmethod
     def parse_file(self) -> None:
         """Parse the contents."""
-        while self._idx < self.num_lines:
-            if REWATCH.match(self.current_line):
-                self.parse_entry()
-            else:
-                self.next_line()
 
+    @abc.abstractmethod
     def parse_entry(self) -> None:
         """Parse a rewatch entry."""
-        rewatch_name = self.remove_formatting(self.current_line[2:])
-        year = self.year
-        if self.year == 2014:
-            rewatch_name, year = REWATCH_YEAR.findall(rewatch_name)[0]
-        rewatch = Rewatch(rewatch_name=rewatch_name, year=year)
-        self.next_line()
-        while not self.out_of_bounds:
-            if REWATCH.match(self.current_line):
-                break
-            if self.current_line.startswith("Host"):
-                rewatch.hosts = ", ".join(HOSTS.findall(self.current_line))
-                self.next_line()
-            elif self.current_line.count("|") >= 1:
-                rewatch.table = self.read_table()
-            elif self.current_line.startswith("*") or self.current_line.startswith(
-                "###"
-            ):
-                if rewatch.hosts:
-                    rewatch.table_name = self.remove_formatting(self.current_line)
-                else:
-                    rewatch.rewatch_alt_name = self.remove_formatting(self.current_line)
-                self.next_line()
-            else:
-                self.next_line()
-            if rewatch.table:
-                if rewatch.table[0].split("|")[1] == "**Host**":
-                    rewatch.hosts = ", ".join(
-                        row.split("|")[1].strip() for row in rewatch.table[1:]
-                    )
-                self.create_entry(rewatch=rewatch)
-                rewatch.reset_table()
 
     def read_table(self) -> list[str]:
         """Parse a markdown table."""
@@ -171,34 +127,11 @@ class Parser:
         return table
 
     @staticmethod
+    @abs.abstractmethod
     def parse_table(
         table: list[str], rewatch_name: str = None, year: int = None
     ) -> dict:
         """Extract information from the table given in markdown format."""
-        if (rewatch_name, year) in {
-            ("Mod Movie Series", 2022),
-        }:
-            return TableParser.parse_table_one_header_contents_left(table)
-        if (rewatch_name, year) in {
-            ("Ah! My Goddess", 2016),
-            ("Baka to Test", 2016),
-            ("Barakamon", 2016),
-            ("Aria", 2015),
-            ("Amagami SS", 2015),
-            ("Kara no Kyoukai", 2015),
-        }:
-            return TableParser.parse_table_one_header_alternate_contents(table)
-        if (rewatch_name, year) in {
-            ("Anime Movie Fortnight", 2015),
-            ("Halloween Horror Week", 2015),
-            ("Shinseiki Evangelion (Rebuild)", 2016),
-        }:
-            return TableParser.parse_table_one_header_contents_right(table)
-        if TABLE_LINK_AND_TEXT.findall(table[0]):
-            return TableParser.parse_table_no_headers(table)
-        if not TABLE_HEADER.findall(table[0]):
-            return TableParser.parse_table_alternate_headers(table)
-        raise ValueError("Invalid table format.")
 
     @staticmethod
     def remove_formatting(text: str) -> str:
@@ -211,27 +144,9 @@ class Parser:
         ans.strip()
         return ans
 
-    def create_entry(self, rewatch: Rewatch) -> None:
+    @abc.abstractmethod
+    def create_entry(self) -> None:
         """Create a db entry."""
-        try:
-            with open(REWATCH_ENTRY_PATH, encoding="utf8") as f:
-                self._db.q.execute(f.read(), rewatch.info)
-            rewatch_id = self._db.last_row_id
-            rewatch_contents = self.parse_table(
-                table=rewatch.table, rewatch_name=rewatch.rewatch_name, year=self.year
-            )
-            with open(EPISODE_ENTRY_PATH, encoding="utf8") as f:
-                query = f.read()
-                for episode, link in rewatch_contents.items():
-                    if link:
-                        self._db.q.execute(
-                            query,
-                            (rewatch_id, link, Parser.remove_formatting(episode)),
-                        )
-        except BaseException as e:
-            print(f"Exception: {e}")
-            print(f"{rewatch_id} - {rewatch.rewatch_name} - {episode} - {link}")
-        self._db.commit()
 
     @property
     def current_line(self) -> str:
@@ -248,22 +163,6 @@ class Parser:
         """Check if the file is over."""
         return self._idx >= self.num_lines
 
-    @property
-    def year(self) -> int:
-        """Return the year included in the file name."""
-        file_name = pathlib.Path(self._file_path).stem
-        try:
-            return int(file_name)
-        except ValueError:
-            return None
-
     def next_line(self) -> None:
         """Advance the line counter."""
         self._idx += 1
-
-
-if __name__ == "__main__":
-    for y in range(2014, 2023):
-        print(f"Processing year {y}")
-        parser = Parser(f"{FILE_PATH}{y}.md", Database())
-        parser.parse_file()

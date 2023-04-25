@@ -3,20 +3,22 @@
 import pathlib
 import json
 import pickle
+import abc
 from typing import Any
 import praw
 from praw.models.reddit.submission import Submission
 from praw.models.reddit.comment import Comment
 from rewatch_database import Database
 
-BASE_PATH = "data\\rewatch_data"
-QUERY_PATH = "src\\queries"
+QUERY_PATH = "src\\queries\\add_comment_tree_relations.sql"
+with open(QUERY_PATH, encoding="utf8") as F:
+    ADD_COMMENT_TREE_RELATIONS = F.read()
 
 
-class CommentTreeScraper:
+class CommentTreeScraper(abc.ABC):
     """The scraper."""
 
-    def __init__(self, config_name: str, db: Database = Database()) -> None:
+    def __init__(self, config_name: str, db: Database) -> None:
         """Initialise a Reddit instance for the given bot name.
 
         The configuration must be in a .ini file in the workspace folder."""
@@ -100,14 +102,16 @@ class CommentTreeScraper:
             comment.id: self.comment_to_json(comment) for comment in self.all_comments
         }
 
-    def dump_all(self) -> None:
+    def dump_all(self, path: str) -> None:
         """Dump everything from the current submission."""
         comments_json = self.comments_to_json()
-        self.dump_pickle()
-        self.dump_json(obj=[self.submission_to_json(self._submission), comments_json])
+        self.dump_pickle(path=path)
+        self.dump_json(
+            obj=[self.submission_to_json(self._submission), comments_json], path=path
+        )
         self.dump_to_db(comments_json)
 
-    def dump_pickle(self, path: str = BASE_PATH) -> None:
+    def dump_pickle(self, path: str) -> None:
         """Pickle all information.
 
         The file is named after the submission id."""
@@ -117,7 +121,7 @@ class CommentTreeScraper:
             print(f"Pickling submission {self.id}")
             pickle.dump([self.extract_submission(), self.extract_comments()], f)
 
-    def dump_json(self, obj: Any, path: str = BASE_PATH) -> None:
+    def dump_json(self, obj: Any, path: str) -> None:
         """Dump the information in JSON format.
 
         The file is named after the submission id."""
@@ -137,46 +141,9 @@ class CommentTreeScraper:
             )
             for comment_id, comment in comments_data.items()
         )
-        with open(
-            f"{QUERY_PATH}\\add_comment_tree_relations.sql", encoding="utf8"
-        ) as f:
-            try:
-                self._db.q.executemany(f.read(), relations)
-                self._db.commit()
-            except BaseException as e:
-                print(f"Exception: {e}")
-
-
-def scrape_from_db(config: str, db: Database = Database()) -> None:
-    """Scrape"""
-    scraper = CommentTreeScraper(config)
-    while True:
-        rewatch = db.q.execute(
-            "SELECT id FROM rewatch WHERE processed = 0 LIMIT 1"
-        ).fetchone()
-        if not rewatch:
-            print("done")
-            break
-        rewatch_id = rewatch["id"]
-        print(f"Processing rewatch #{rewatch_id}")
-        episodes = db.q.execute(
-            "SELECT post_id, title FROM episode WHERE id = ?", (rewatch_id,)
-        ).fetchall()
-        print(f"{len(episodes)} posts found")
         try:
-            for episode in episodes:
-                print(f"Processing post {episode['title']}")
-                scraper.select_submission(episode["post_id"])
-                scraper.dump_all()
-            db.commit()
-            print("Comment tree processed")
-            db.q.execute("UPDATE rewatch SET processed = 1 WHERE id = ?", (rewatch_id,))
-            db.commit()
-            print("Rewatch marked as processed")
+            self._db.q.executemany(ADD_COMMENT_TREE_RELATIONS, relations)
+            self._db.commit()
         except BaseException as e:
             print(f"Exception: {e}")
-            db.rollback()
-
-
-if __name__ == "__main__":
-    scrape_from_db("CommentTreeScraper")
+            self._db.rollback()

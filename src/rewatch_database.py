@@ -16,14 +16,15 @@ def dict_factory(cursor: sqlite3.Cursor, row: sqlite3.Row) -> dict:
 class Database:
     """The database."""
 
-    def __init__(self, database: str = "data\\rewatches.sqlite") -> None:
+    def __init__(self, path: str) -> None:
         """Initiliase from db path."""
         try:
-            self._db = sqlite3.connect(database=database)
+            self._db = sqlite3.connect(database=path)
             self._db.execute("PRAGMA foreign_keys = ON")
             self._db.row_factory = dict_factory
+            self.setup_tables()
         except sqlite3.OperationalError:
-            logging.error("Failed to open database: %s", database)
+            logging.error("Failed to open database: %s", path)
 
     @property
     def q(self) -> sqlite3.Cursor:
@@ -66,6 +67,5 @@ if __name__ == "__main__":
         level=logging.DEBUG,
     )
     logging.info("-" * 60)
-    db = Database()
-    db.setup_tables()
+    db = Database(path="data\\rewatches.sqlite")
     logging.info("%s%s", "-" * 60, "\n")
