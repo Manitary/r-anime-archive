@@ -15,8 +15,8 @@ logger = logging.getLogger(__name__)
 
 IMAGE_API = "https://api.imgur.com/3/image/"
 ALBUM_API = "https://api.imgur.com/3/album/"
-IMAGE_ID = re.compile(r"(?:https:\/\/|http:\/\/|i\.)imgur.com\/(\w+)(?:\.\w+)?")
-ALBUM_ID = re.compile(r"(?:https:\/\/|http:\/\/|i\.)imgur.com\/a\/(\w+)")
+IMAGE_ID = re.compile(r"imgur.com\/(\w+)(?:\.\w+)?")
+ALBUM_ID = re.compile(r"imgur.com\/a\/(\w+)")
 STACK_ID = re.compile(r"i\.stack\.imgur\.com\/(\w+(?:\.\w+)?)")
 FILE_TYPE = re.compile(r"\w+\/(\w+)")
 
@@ -26,9 +26,13 @@ PERIOD = 86400
 
 
 @ratelimit.sleep_and_retry
-@ratelimit.limits(calls=CALLS, period=PERIOD)
+@ratelimit.limits(calls=4, period=1)
 def check_limit() -> None:
     """Empty function to check for rate limits."""
+
+
+class Exception404(Exception):
+    """Raise when a 404 code is returned."""
 
 
 class ScraperImgur:
@@ -44,7 +48,7 @@ class ScraperImgur:
     def get_links(self) -> Iterator[str]:
         """Get the list of links from the database."""
         entries = self._db.q.execute(
-            "SELECT DISTINCT imgur_link FROM imgur_link WHERE processed = 0"
+            "SELECT DISTINCT imgur_link FROM imgur_link WHERE processed = 0 AND error404 = 0"
         ).fetchall()
         for entry in entries:
             link = entry["imgur_link"]
@@ -61,6 +65,11 @@ class ScraperImgur:
                     "UPDATE imgur_link SET processed = 1 WHERE imgur_link = ?", (link,)
                 )
                 self._db.commit()
+            except Exception404:
+                self._db.q.execute(
+                    "UPDATE imgur_link SET error404 = 1 WHERE imgur_link = ?", (link,)
+                )
+                self._db.commit()
             except Exception as e:
                 print(f"An exception has occurred: {e}")
                 logger.error(
@@ -74,8 +83,8 @@ class ScraperImgur:
         Distinguish behaviour between image link and album link,
         as well as 'deprecated' link types (e.g. i.stacks.imgur.com)."""
         # Edge cases links
-        if file_name := STACK_ID.match(url):
-            self.download_special(url, file_name.group(0))
+        if file_name := STACK_ID.search(url):
+            self.download_special(url, file_name.group(1))
             return
         # Album link
         if album_id := ALBUM_ID.search(url):
@@ -102,12 +111,16 @@ class ScraperImgur:
                 image_id,
                 r.status_code,
             )
+            if r.status_code == 404:
+                raise Exception404(
+                    f"Image {image_id} returned error code {r.status_code}"
+                )
             raise ValueError(f"Image {image_id} returned error code {r.status_code}")
 
         return r.json()["data"]
 
     @ratelimit.sleep_and_retry
-    @ratelimit.limits(calls=1, period=2)
+    @ratelimit.limits(calls=3, period=1)
     def download_image(self, image_data: dict) -> None:
         """Download an image and its data from imgur."""
         image_url = image_data["link"]
@@ -147,6 +160,10 @@ class ScraperImgur:
                 album_id,
                 r.status_code,
             )
+            if r.status_code == 404:
+                raise Exception404(
+                    f"Album {album_id} returned error code {r.status_code}"
+                )
             raise ValueError(f"Album {album_id} returned error code {r.status_code}")
 
         album_data = r.json()["data"]
