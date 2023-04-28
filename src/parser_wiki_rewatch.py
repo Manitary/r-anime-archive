@@ -93,6 +93,30 @@ class ParserRewatch(Parser):
             return TableParser.parse_table_alternate_headers(table)
         raise ValueError("Invalid table format.")
 
+    def create_entry(self, rewatch: Rewatch) -> None:
+        """Create a db entry."""
+        self._db.begin()
+        try:
+            with open(REWATCH_ENTRY_PATH, encoding="utf8") as f:
+                self._db.q.execute(f.read(), rewatch.info)
+            rewatch_id = self._db.last_row_id
+            rewatch_contents = self.parse_table(
+                table=rewatch.table, rewatch_name=rewatch.rewatch_name, year=self.year
+            )
+            with open(EPISODE_ENTRY_PATH, encoding="utf8") as f:
+                query = f.read()
+                for episode, link in rewatch_contents.items():
+                    if link:
+                        self._db.q.execute(
+                            query,
+                            (rewatch_id, link, Parser.remove_formatting(episode)),
+                        )
+            self._db.commit()
+        except BaseException as e:
+            print(f"Exception: {e}")
+            print(f"{rewatch_id} - {rewatch.rewatch_name} - {episode} - {link}")
+            self._db.rollback()
+
     @property
     def year(self) -> int:
         """Return the year included in the file name."""
