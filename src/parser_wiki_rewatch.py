@@ -8,7 +8,7 @@ from parser_wiki import TableParser, Rewatch, Parser
 REWATCH_ENTRY_PATH = "src\\queries\\rewatch\\add_rewatch_entry.sql"
 EPISODE_ENTRY_PATH = "src\\queries\\add_episodes.sql"
 
-FILE_PATH = "data\\wiki\\anime\\rewatches\\rewatch_archive_edited\\"
+FILE_PATH = "data\\wiki\\anime\\rewatches\\rewatch_archive_edited"
 
 REWATCH = re.compile(r"##[^\#]")
 HOSTS = re.compile(r"(\/?u\/[\w_-]+)")
@@ -131,6 +131,6 @@ if __name__ == "__main__":
     for y in range(2014, 2023):
         print(f"Processing year {y}")
         parser = ParserRewatch(
-            f"{FILE_PATH}{y}.md", DatabaseRewatch(path="data\\rewatches.sqlite")
+            f"{FILE_PATH}\\{y}.md", DatabaseRewatch(path="data\\rewatches.sqlite")
         )
         parser.parse_file()
