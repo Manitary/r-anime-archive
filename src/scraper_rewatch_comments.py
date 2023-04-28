@@ -46,7 +46,7 @@ def scrape_from_db(config_name: str, db: DatabaseRewatch) -> None:
             db.commit()
             print("Rewatch marked as processed")
             logging.info("Rewatch #%s marked as processed", rewatch_id)
-        except BaseException as e:
+        except Exception as e:
             print(f"Exception: {e}")
             logging.error(
                 "An exception has occurred while processing rewatch #%s: %s",
