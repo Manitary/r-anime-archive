@@ -22,7 +22,7 @@ class ParserRewatch(Parser):
 
     def parse_file(self) -> None:
         """Parse the contents."""
-        while self._idx < self.num_lines:
+        while not self.out_of_bounds:
             if REWATCH.match(self.current_line):
                 self.parse_entry()
             else:
@@ -105,12 +105,12 @@ class ParserRewatch(Parser):
             )
             with open(EPISODE_ENTRY_PATH, encoding="utf8") as f:
                 query = f.read()
-                for episode, link in rewatch_contents.items():
-                    if link:
-                        self._db.q.execute(
-                            query,
-                            (rewatch_id, link, Parser.remove_formatting(episode)),
-                        )
+            for episode, link in rewatch_contents.items():
+                if link:
+                    self._db.q.execute(
+                        query,
+                        (rewatch_id, link, Parser.remove_formatting(episode)),
+                    )
             self._db.commit()
         except BaseException as e:
             print(f"Exception: {e}")
