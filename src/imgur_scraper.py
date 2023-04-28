@@ -143,6 +143,7 @@ class ScraperImgur:
         data_path = pathlib.Path(f"{self._path}\\{DATA_PATH}\\{image_id}.json")
         file_path = pathlib.Path(f"{self._path}\\{FILE_PATH}\\{image_id}.{file_type}")
         if file_path.is_file():
+            logger.info("The image %s already exists", image_id)
             return
         r = requests.get(url=image_url, timeout=DEFAULT_TIMEOUT, stream=True)
         if r.status_code != 200:
@@ -157,7 +158,7 @@ class ScraperImgur:
             shutil.copyfileobj(r.raw, f)
         with data_path.open("w", encoding="utf8") as f:
             f.write(json.dumps(image_data))
-        print(f"Image at {image_url} downloaded to {file_path}.")
+        print(f"Image at {image_url} downloaded to {file_path}")
 
     def download_album(self, album_id: str) -> dict:
         """Download album data from imgur given its id."""
@@ -196,6 +197,7 @@ class ScraperImgur:
         """Special downloads that do not follow usual rules."""
         file_path = pathlib.Path(f"{self._path}\\{SPECIAL_PATH}\\{file_name}")
         if file_path.is_file():
+            logger.info("The image %s already exists", file_name)
             return
         check_limit()
         r = requests.get(
@@ -215,4 +217,4 @@ class ScraperImgur:
         with file_path.open("wb") as f:
             r.raw.decode_content = True
             shutil.copyfileobj(r.raw, f)
-        print(f"Image at {image_url} downloaded to {file_path}.")
+        print(f"Image at {image_url} downloaded to {file_path}")
