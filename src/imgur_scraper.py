@@ -143,6 +143,7 @@ class ScraperImgur:
         data_path = pathlib.Path(f"{self._path}\\{DATA_PATH}\\{image_id}.json")
         file_path = pathlib.Path(f"{self._path}\\{FILE_PATH}\\{image_id}.{file_type}")
         if file_path.is_file():
+            print("The image already exists")
             logger.info("The image %s already exists", image_id)
             return
         r = requests.get(url=image_url, timeout=DEFAULT_TIMEOUT, stream=True)
@@ -197,6 +198,7 @@ class ScraperImgur:
         """Special downloads that do not follow usual rules."""
         file_path = pathlib.Path(f"{self._path}\\{SPECIAL_PATH}\\{file_name}")
         if file_path.is_file():
+            print("The image already exists")
             logger.info("The image %s already exists", file_name)
             return
         check_limit()
