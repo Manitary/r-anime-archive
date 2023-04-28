@@ -8,6 +8,7 @@ from logging.handlers import TimedRotatingFileHandler
 
 REWATCH_PATH = "src\\queries\\rewatch"
 WRITING_PATH = "src\\queries\\writing"
+DISCUSSION_PATH = "src\\queries\\discussion"
 TABLE_QUERY = "table_setup.sql"
 
 
@@ -81,6 +82,16 @@ class DatabaseWriting(Database):
         logging.info("Query executed: %s", f"{WRITING_PATH}\\{TABLE_QUERY}")
 
 
+class DatabaseDiscussion(Database):
+    """Discussion database."""
+
+    def setup_tables(self) -> None:
+        with open(f"{DISCUSSION_PATH}\\{TABLE_QUERY}", encoding="utf8") as f:
+            query = f.read()
+        self.q.executescript(query)
+        logging.info("Query executed: %s", f"{DISCUSSION_PATH}\\{TABLE_QUERY}")
+
+
 def create_database(db: Database) -> None:
     """Create db and set up tables."""
     db.setup_tables()
@@ -101,4 +112,5 @@ if __name__ == "__main__":
     logging.info("-" * 60)
     create_database(db=DatabaseRewatch(path="data\\rewatches.sqlite"))
     create_database(db=DatabaseWriting(path="data\\writing.sqlite"))
+    create_database(db=DatabaseDiscussion(path="data\\discussion.sqlite"))
     logging.info("%s%s", "-" * 60, "\n")
