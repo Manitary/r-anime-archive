@@ -20,6 +20,10 @@ ALBUM_ID = re.compile(r"imgur.com\/a\/(\w+)")
 STACK_ID = re.compile(r"i\.stack\.imgur\.com\/(\w+(?:\.\w+)?)")
 FILE_TYPE = re.compile(r"\w+\/(\w+)")
 
+DATA_PATH = "image_data"
+FILE_PATH = "images"
+SPECIAL_PATH = "special"
+
 DEFAULT_TIMEOUT = 60
 CALLS = 12500
 PERIOD = 86400
@@ -55,8 +59,18 @@ class ScraperImgur:
             print(f"New link found: {link}")
             yield link
 
+    def create_base_paths(self) -> None:
+        """Create paths for image data if they do not exist."""
+        data_path = pathlib.Path(f"{self._path}\\{DATA_PATH}")
+        file_path = pathlib.Path(f"{self._path}\\{FILE_PATH}")
+        special_path = pathlib.Path(f"{self._path}\\{SPECIAL_PATH}")
+        data_path.mkdir(parents=True, exist_ok=True)
+        file_path.mkdir(parents=True, exist_ok=True)
+        special_path.mkdir(parents=True, exist_ok=True)
+
     def scrape(self) -> None:
         """Scrape the links."""
+        self.create_base_paths()
         for link in self.get_links():
             self._db.begin()
             try:
@@ -126,10 +140,10 @@ class ScraperImgur:
         image_url = image_data["link"]
         image_id = image_data["id"]
         file_type = FILE_TYPE.search(image_data["type"]).group(1)
-        data_path = pathlib.Path(f"{self._path}\\image_data\\{image_id}.json")
-        file_path = pathlib.Path(f"{self._path}\\images\\{image_id}.{file_type}")
-        data_path.parent.mkdir(parents=True, exist_ok=True)
-        file_path.parent.mkdir(parents=True, exist_ok=True)
+        data_path = pathlib.Path(f"{self._path}\\{DATA_PATH}\\{image_id}.json")
+        file_path = pathlib.Path(f"{self._path}\\{FILE_PATH}\\{image_id}.{file_type}")
+        if file_path.is_file():
+            return
         r = requests.get(url=image_url, timeout=DEFAULT_TIMEOUT, stream=True)
         if r.status_code != 200:
             print("Error code: ", r.status_code)
@@ -180,8 +194,9 @@ class ScraperImgur:
 
     def download_special(self, image_url: str, file_name: str) -> None:
         """Special downloads that do not follow usual rules."""
-        file_path = pathlib.Path(f"{self._path}\\special\\{file_name}")
-        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path = pathlib.Path(f"{self._path}\\{SPECIAL_PATH}\\{file_name}")
+        if file_path.is_file():
+            return
         check_limit()
         r = requests.get(
             url=f"http://{image_url}", timeout=DEFAULT_TIMEOUT, stream=True
@@ -191,6 +206,10 @@ class ScraperImgur:
             logger.error(
                 "The image at url %s returned error code %s", image_url, r.status_code
             )
+            if r.status_code == 404:
+                raise Exception404(
+                    f"The url {image_url} returned error code {r.status_code}"
+                )
             raise ValueError(f"The url {image_url} returned error code {r.status_code}")
 
         with file_path.open("wb") as f:
