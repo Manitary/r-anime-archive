@@ -30,7 +30,7 @@ PERIOD = 86400
 
 
 @ratelimit.sleep_and_retry
-@ratelimit.limits(calls=4, period=1)
+@ratelimit.limits(calls=5, period=1)
 def check_limit() -> None:
     """Empty function to check for rate limits."""
 
@@ -39,13 +39,19 @@ class Exception404(Exception):
     """Raise when a 404 code is returned."""
 
 
+class Exception429(Exception):
+    """Raise when a 429 code is returned."""
+
+
 class ScraperImgur:
     """The scraper."""
 
-    def __init__(self, path: str, db: Database) -> None:
+    def __init__(self, path: str, db: Database, config_id: int = 0) -> None:
+        self._config_id = config_id
         config = configparser.ConfigParser()
         config.read("config.ini")
-        self._client_id = config["imgur"]["client_id"]
+        config_section = "imgur" if config_id == 0 else f"imgur-{config_id}"
+        self._client_id = config[config_section]["client_id"]
         self._path = path
         self._db = db
 
@@ -84,6 +90,11 @@ class ScraperImgur:
                     "UPDATE imgur_link SET error404 = 1 WHERE imgur_link = ?", (link,)
                 )
                 self._db.commit()
+            except Exception429 as e:
+                print(f"An exception has occurred: {e}")
+                logger.error("Configuration #%s returned a 429 error", self._config_id)
+                self._db.rollback()
+                return
             except Exception as e:
                 print(f"An exception has occurred: {e}")
                 logger.error(
@@ -129,12 +140,14 @@ class ScraperImgur:
                 raise Exception404(
                     f"Image {image_id} returned error code {r.status_code}"
                 )
+            if r.status_code == 429:
+                raise Exception429()
             raise ValueError(f"Image {image_id} returned error code {r.status_code}")
 
         return r.json()["data"]
 
     @ratelimit.sleep_and_retry
-    @ratelimit.limits(calls=3, period=1)
+    @ratelimit.limits(calls=5, period=1)
     def download_image(self, image_data: dict) -> None:
         """Download an image and its data from imgur."""
         image_url = image_data["link"]
@@ -152,6 +165,8 @@ class ScraperImgur:
             logger.error(
                 "The image at url %s returned error code %s", image_url, r.status_code
             )
+            if r.status_code == 429:
+                raise Exception429()
             raise ValueError(f"The url {image_url} returned error code {r.status_code}")
 
         with file_path.open("wb") as f:
@@ -180,12 +195,23 @@ class ScraperImgur:
                 raise Exception404(
                     f"Album {album_id} returned error code {r.status_code}"
                 )
+            if r.status_code == 429:
+                raise Exception429()
             raise ValueError(f"Album {album_id} returned error code {r.status_code}")
 
         album_data = r.json()["data"]
         print(f"Processing album {album_id}")
-        for image in album_data["images"]:
-            self.download_image(image)
+        for num, image in enumerate(album_data["images"], 1):
+            try:
+                self.download_image(image)
+            except Exception as e:
+                logger.error(
+                    "An exception has occurred while processing image #%s (%s) in album %s: %s",
+                    num,
+                    image["id"],
+                    album_id,
+                    e,
+                )
         # Keep only image IDs, as their other data is stored separately.
         album_data["images"] = [image["id"] for image in album_data["images"]]
         data_path = pathlib.Path(f"{self._path}\\album_data\\{album_id}.json")
@@ -202,9 +228,9 @@ class ScraperImgur:
             logger.info("The image %s already exists", file_name)
             return
         check_limit()
-        r = requests.get(
-            url=f"http://{image_url}", timeout=DEFAULT_TIMEOUT, stream=True
-        )
+        if not image_url.startswith("http"):
+            image_url = f"http://{image_url}"
+        r = requests.get(url=image_url, timeout=DEFAULT_TIMEOUT, stream=True)
         if r.status_code != 200:
             print("Error code: ", r.status_code)
             logger.error(
@@ -214,6 +240,8 @@ class ScraperImgur:
                 raise Exception404(
                     f"The url {image_url} returned error code {r.status_code}"
                 )
+            if r.status_code == 429:
+                raise Exception429
             raise ValueError(f"The url {image_url} returned error code {r.status_code}")
 
         with file_path.open("wb") as f:

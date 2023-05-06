@@ -1,6 +1,7 @@
 """Scrape rewatch archive imgur links."""
 
 import os
+import itertools
 import logging
 from logging.handlers import TimedRotatingFileHandler
 from imgur_scraper import ScraperImgur
@@ -22,7 +23,9 @@ if __name__ == "__main__":
         datefmt="%Y-%m-%d %H:%M:%S",
         level=logging.INFO,
     )
-    logging.info("-" * 60)
-    scraper = ScraperImgur(path=PATH, db=DatabaseRewatch(path=DB_PATH))
-    scraper.scrape()
-    logging.info("%s%s", "-" * 60, "\n")
+    for i in itertools.count(start=25):
+        logging.info("-" * 60)
+        logging.info("Connecting with app credentials #%s", i)
+        scraper = ScraperImgur(path=PATH, db=DatabaseRewatch(path=DB_PATH), config_id=i)
+        scraper.scrape()
+        logging.info("%s%s", "-" * 60, "\n")
