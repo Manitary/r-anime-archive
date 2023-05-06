@@ -41,6 +41,21 @@ class Rewatch:
         )
 
 
+@dataclass
+class Discussion:
+    """A discussion entry."""
+
+    name: str
+    year: int = None
+    notes: str = None
+    episodes: dict = field(default_factory=dict)
+
+    @property
+    def info(self) -> tuple[str]:
+        """Return discussion info to add to the db."""
+        return (self.name, self.year, self.notes)
+
+
 class TableParser:
     """Parse a variety of markdown tables used in the rewatch archive."""
 

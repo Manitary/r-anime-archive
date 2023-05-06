@@ -8,7 +8,7 @@ from parser_wiki import TableParser, Rewatch, Parser
 REWATCH_ENTRY_PATH = "src\\queries\\rewatch\\add_rewatch_entry.sql"
 EPISODE_ENTRY_PATH = "src\\queries\\add_episodes.sql"
 
-FILE_PATH = "data\\wiki\\anime\\rewatches\\rewatch_archive_edited\\"
+FILE_PATH = "data\\wiki\\anime\\rewatches\\rewatch_archive_edited"
 
 REWATCH = re.compile(r"##[^\#]")
 HOSTS = re.compile(r"(\/?u\/[\w_-]+)")
@@ -22,7 +22,7 @@ class ParserRewatch(Parser):
 
     def parse_file(self) -> None:
         """Parse the contents."""
-        while self._idx < self.num_lines:
+        while not self.out_of_bounds:
             if REWATCH.match(self.current_line):
                 self.parse_entry()
             else:
@@ -93,6 +93,30 @@ class ParserRewatch(Parser):
             return TableParser.parse_table_alternate_headers(table)
         raise ValueError("Invalid table format.")
 
+    def create_entry(self, rewatch: Rewatch) -> None:
+        """Create a db entry."""
+        self._db.begin()
+        try:
+            with open(REWATCH_ENTRY_PATH, encoding="utf8") as f:
+                self._db.q.execute(f.read(), rewatch.info)
+            rewatch_id = self._db.last_row_id
+            rewatch_contents = self.parse_table(
+                table=rewatch.table, rewatch_name=rewatch.rewatch_name, year=self.year
+            )
+            with open(EPISODE_ENTRY_PATH, encoding="utf8") as f:
+                query = f.read()
+            for episode, link in rewatch_contents.items():
+                if link:
+                    self._db.q.execute(
+                        query,
+                        (rewatch_id, link, Parser.remove_formatting(episode)),
+                    )
+            self._db.commit()
+        except BaseException as e:
+            print(f"Exception: {e}")
+            print(f"{rewatch_id} - {rewatch.rewatch_name} - {episode} - {link}")
+            self._db.rollback()
+
     @property
     def year(self) -> int:
         """Return the year included in the file name."""
@@ -107,6 +131,6 @@ if __name__ == "__main__":
     for y in range(2014, 2023):
         print(f"Processing year {y}")
         parser = ParserRewatch(
-            f"{FILE_PATH}{y}.md", DatabaseRewatch(path="data\\rewatches.sqlite")
+            f"{FILE_PATH}\\{y}.md", DatabaseRewatch(path="data\\rewatches.sqlite")
         )
         parser.parse_file()
