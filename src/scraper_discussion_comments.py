@@ -1,6 +1,7 @@
 """Scrape submissions and comments."""
 
 import os
+import sys
 import logging
 from logging.handlers import TimedRotatingFileHandler
 from database import DatabaseDiscussion
@@ -69,8 +70,9 @@ if __name__ == "__main__":
         ],
         format="%(asctime)s | %(name)s | %(levelname)s | %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
-        level=logging.DEBUG,
+        level=logging.INFO,
     )
+    sys.setrecursionlimit(3000)
     scrape_from_db(
         config_name="CommentTreeScraper", db=DatabaseDiscussion(path=DB_PATH)
     )
