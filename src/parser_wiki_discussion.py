@@ -22,6 +22,7 @@ HEADERS = re.compile(r"\|?([^\|]+)\|?")
 CONTENTS_LINKS = re.compile(
     r"\[[^\]]+\]\([^|]*(?:comments|redd\.it)?\/(\w+)[^\)]*(?:\)|$)"
 )
+LONG_RUNNING_PARSE = re.compile(r"\[([^\]]+)\]\([^\)]*\/(\w+)\/?\)")
 
 
 # Compare with parser_wiki.TableParser to see which one to keep/improve.
@@ -63,6 +64,24 @@ class TableDiscussionParser:
                     ans[links[0]] = title
         return ans
 
+    @staticmethod
+    def parse_table_no_headers(table: list[str]) -> dict:
+        """Parse a table that has no header.
+
+        Contents have the form:
+        - [text](link) (| repeat)"""
+        return reduce(
+            ior,
+            list(
+                {
+                    entry[1]: entry[0]
+                    for entry in LONG_RUNNING_PARSE.findall(row)
+                    if entry[1]
+                }
+                for row in table
+            ),
+        )
+
 
 class ParserDiscussion(Parser):
     """Parser for episode discussion wiki pages."""
@@ -74,6 +93,8 @@ class ParserDiscussion(Parser):
         elif self.year in {2017, 2018, 2019, 2021, 2022}:
             self.parse_file_1(delimiter="**")
         elif self.year in {2020}:
+            self.parse_file_1(delimiter="###")
+        elif self.name == "long_running_anime":
             self.parse_file_1(delimiter="###")
 
     def parse_file_1(self, delimiter: str) -> None:
@@ -103,7 +124,9 @@ class ParserDiscussion(Parser):
                             discussion.episodes[post_id] = title.strip()
                         self.next_line()
                 else:
-                    if self.current_line.lstrip(punctuation + " ").startswith("Ep."):
+                    if self.name == "long_running_anime":
+                        table_parser = TableDiscussionParser.parse_table_no_headers
+                    elif self.current_line.lstrip(punctuation + " ").startswith("Ep."):
                         table_parser = (
                             TableDiscussionParser.parse_table_alternate_headers
                         )
@@ -150,15 +173,27 @@ class ParserDiscussion(Parser):
         except ValueError:
             return None
 
+    @property
+    def name(self) -> str:
+        """Return the file name."""
+        return pathlib.Path(self._file_path).stem
+
     @staticmethod
     def parse_table() -> None:
         pass
 
 
 if __name__ == "__main__":
+    # Episode discussions year 2011-2022
     for y in range(2011, 2023):
         print(f"Processing year {y}")
         parser = ParserDiscussion(
             f"{FILE_PATH}\\{y}.md", DatabaseDiscussion(path="data\\discussion.sqlite")
         )
         parser.parse_file()
+    # Episode discussions long running anime
+    parser = ParserDiscussion(
+        f"{FILE_PATH}\\long_running_anime.md",
+        DatabaseDiscussion(path="data\\discussion.sqlite"),
+    )
+    parser.parse_file()

@@ -156,7 +156,7 @@ class Parser(abc.ABC):
             ans = ans.replace("*", "", 2)
         while ans.startswith("#"):
             ans = ans[1:]
-        ans.strip()
+        ans = ans.strip()
         return ans
 
     @abc.abstractmethod
