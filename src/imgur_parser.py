@@ -8,7 +8,7 @@ import itertools
 from database import Database
 
 IMGUR = re.compile(
-    r"((?:https?:\/\/)?(?:i\.|m\.|www\.)?(?:stack\.)?imgur\.com(?:\\\\)?\/(?:a\/)?\w{3,}(?:\.\w+)?)"
+    r"((?:https?:\/\/)?(?:i\.|m\.|www\.)?(?:stack\.)?imgur\.com\/(?:a\/|gallery\/)?[a-zA-Z0-9]{4,}(?:\.\w+)?)"
 )
 
 

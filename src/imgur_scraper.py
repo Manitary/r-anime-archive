@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 IMAGE_API = "https://api.imgur.com/3/image/"
 ALBUM_API = "https://api.imgur.com/3/album/"
 IMAGE_ID = re.compile(r"imgur.com\/(\w+)(?:\.\w+)?")
-ALBUM_ID = re.compile(r"imgur.com\/a\/(\w+)")
+ALBUM_ID = re.compile(r"imgur.com\/(?:a|gallery)\/(\w+)")
 STACK_ID = re.compile(r"i\.stack\.imgur\.com\/(\w+(?:\.\w+)?)")
 FILE_TYPE = re.compile(r"\w+\/(\w+)")
 
