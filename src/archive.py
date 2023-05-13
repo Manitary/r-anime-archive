@@ -12,20 +12,6 @@ logger = logging.getLogger(__name__)
 IMGUR_TIME = datetime.datetime(year=2023, month=4, day=19)
 
 
-# class ArchiveChecker(wayback.WaybackClient):
-#     """The wayback client"""
-
-#     def __init__(
-#         self, db: database.Database, time: datetime.datetime, *args, **kwargs
-#     ) -> None:
-#         super().__init__(*args, **kwargs)
-#         self._time = time
-#         self._db = db
-
-#     def is_archived(self, url: str) -> None:
-#         """Verify whether the url was archived at or after the given time."""
-
-
 def is_archived(
     client: wayback.WaybackClient, time: datetime.datetime, url: str
 ) -> None:
@@ -77,14 +63,7 @@ if __name__ == "__main__":
     )
     logging.info("-" * 60)
     main(
-        db=database.DatabaseWriting("data\\writing.sqlite"),
+        db=database.DatabaseWriting("data\\rewatches.sqlite"),
         time=IMGUR_TIME,
     )
-    # print(
-    #     is_archived(
-    #         wayback.WaybackClient(),
-    #         time=IMGUR_TIME,
-    #         url="https://old.reddit.com/r/anime/comments/exbo8v/hibike_euphonium_rewatch_season_1_episode_1/",
-    #     )
-    # )
     logging.info("%s%s", "-" * 60, "\n")
