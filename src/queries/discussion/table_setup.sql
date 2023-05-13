@@ -28,5 +28,6 @@ CREATE TABLE IF NOT EXISTS imgur_link (
     , imgur_link TEXT NOT NULL
     , processed INTEGER NOT NULL DEFAULT 0 -- 1 = downloaded
     , error404 INTEGER NOT NULL DEFAULT 0 -- 1 = the link returns 404, prevent future attempts of scraping
+    , archived INTEGER NOT NULL DEFAULT 0 -- 1|2 = the link was|wasn't archived within the required time frame
     , UNIQUE (comment_id, is_submission, imgur_link) -- only make one entry even if the same link is repeated multiple times in the same post/comment
 );
