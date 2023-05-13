@@ -15,8 +15,10 @@ logger = logging.getLogger(__name__)
 
 IMAGE_API = "https://api.imgur.com/3/image/"
 ALBUM_API = "https://api.imgur.com/3/album/"
+GALLERY_API = "https://api.imgur.com/3/gallery/album/"
 IMAGE_ID = re.compile(r"imgur.com\/(\w+)(?:\.\w+)?")
-ALBUM_ID = re.compile(r"imgur.com\/(?:a|gallery)\/(\w+)")
+ALBUM_ID = re.compile(r"imgur.com\/a\/(\w+)")
+GALLERY_ID = re.compile(r"imgur.com\/gallery\/(\w+)")
 STACK_ID = re.compile(r"i\.stack\.imgur\.com\/(\w+(?:\.\w+)?)")
 FILE_TYPE = re.compile(r"\w+\/(\w+)")
 
@@ -110,6 +112,9 @@ class ScraperImgur:
         # Edge cases links
         if file_name := STACK_ID.search(url):
             self.download_special(url, file_name.group(1))
+            return
+        if gallery_id := GALLERY_ID.search(url):
+            self.download_gallery(gallery_id.group(1))
             return
         # Album link
         if album_id := ALBUM_ID.search(url):
@@ -219,6 +224,20 @@ class ScraperImgur:
         with data_path.open("w", encoding="utf8") as f:
             f.write(json.dumps(album_data))
         print(f"Album complete, data downloaded to {data_path}.")
+
+    def download_gallery(self, gallery_id: str) -> dict:
+        """Download album data from imgur given its id."""
+        try:
+            image_data = self.download_image_data(gallery_id)
+            self.download_image(image_data)
+            return
+        except Exception404:
+            print("The gallery may contain more than one image.")
+            logger.error(
+                "The gallery with id %s may not be a single image. Attempting album download...",
+                gallery_id,
+            )
+        self.download_album(gallery_id)
 
     def download_special(self, image_url: str, file_name: str) -> None:
         """Special downloads that do not follow usual rules."""

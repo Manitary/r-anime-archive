@@ -23,7 +23,7 @@ if __name__ == "__main__":
         datefmt="%Y-%m-%d %H:%M:%S",
         level=logging.INFO,
     )
-    for i in itertools.count(start=25):
+    for i in itertools.count(start=1):
         logging.info("-" * 60)
         logging.info("Connecting with app credentials #%s", i)
         scraper = ScraperImgur(path=PATH, db=DatabaseRewatch(path=DB_PATH), config_id=i)
