@@ -237,7 +237,11 @@ class ScraperImgur:
                 "The gallery with id %s may not be a single image. Attempting album download...",
                 gallery_id,
             )
-        self.download_album(gallery_id)
+        try:
+            self.download_album(gallery_id)
+            return
+        except Exception404:
+            return
 
     def download_special(self, image_url: str, file_name: str) -> None:
         """Special downloads that do not follow usual rules."""
