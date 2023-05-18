@@ -105,15 +105,21 @@ def archive_url(url: str) -> str:
 def send_to_archive(db: database.Database) -> None:
     """Given a table of URLs, send them to the archive."""
     entry = db.q.execute(
-        "SELECT url FROM urls WHERE checked = 1 and archived = 0"
+        "SELECT url FROM urls WHERE checked = 1 and archived = 0 and url LIKE '%/a/%'"
     ).fetchone()
+    if not entry:
+        entry = db.q.execute(
+            "SELECT url FROM urls WHERE checked = 1 and archived = 0"
+        ).fetchone()
     if not entry:
         status = db.q.execute("SELECT COUNT(*) 'num' FROM urls WHERE checked = 0")
         return status["num"] > 0
     url = entry["url"]
-    print(f"Archiving url: {url}")
-    logging.info("Archiving url: %s", url)
-    timestamp = archive_url(url)
+    timestamp = is_archived(wayback.WaybackClient(), url)
+    if not timestamp:
+        print(f"Archiving url: {url}")
+        logging.info("Archiving url: %s", url)
+        timestamp = archive_url(url)
     logging.info("Page archived")
     while True:
         try:
